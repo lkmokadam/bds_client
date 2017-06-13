@@ -41,8 +41,7 @@ class client_camera_system():
     def start_video_record(self,folder_path, video_name):
         global recording_bit
         self._cap = cv2.VideoCapture(0)
-        #fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        fourcc =  cv2.cv.CV_FOURCC('M','J','P','G')
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self._out_video_file = cv2.VideoWriter(os.path.join(folder_path,video_name), fourcc, 20.0, (640, 480))
         while (self._cap.isOpened()):
             ret, frame = self._cap.read()

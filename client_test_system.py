@@ -84,7 +84,7 @@ class client_test_system():
         print "message sent"
 
 
-for i in range(100):
+for i in range(2):
     server_ip_port = "tcp://"+sys.argv[-1]
     client_test_system_thread = client_test_system(server_ip_port)
     client_test_system_thread.run()
