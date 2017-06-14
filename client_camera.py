@@ -1,4 +1,4 @@
-import zmq, threading, subprocess, os, tempfile, cv2, imutils
+import zmq, threading, subprocess, os, tempfile, cv2, imutils, zipfile
 import time
 
 import message_protocols
@@ -79,6 +79,15 @@ class client_camera_system():
         cv2.imwrite(os.path.join(folder_path, img_name), img)
         time.sleep(1)
 
+    def get_zipped_data_bytes(self, tempdir):
+        zip_file = zipfile.ZipFile("data.zip",mode='w')
+        for root, dirs, files in os.walk(tempdir):
+            for file in files:
+                zip_file.write(os.path.join(root, file))
+        return bytearray(zip_file)
+
+
+
     def run(self):
 
         temp_dir = tempfile.mkdtemp()
@@ -109,6 +118,11 @@ class client_camera_system():
 
         self.get_message(message_protocols.CLIENT_CAMERA_DONE)
         self.send_message(message_protocols.CLIENT_CAMERA_RELEASING_RESOURCES)
+
+        self.get_message(message_protocols.CLIENT_CAMERA_GET_ZIPPED_DATA)
+        file_byte_array = self.get_zipped_data_bytes(temp_dir)
+        self.send_message(file_byte_array)
+
 
 
 camera_thread = client_camera_system()
