@@ -1,4 +1,4 @@
-import zmq, threading, subprocess, os, tempfile, cv2, imutils, zipfile
+import zmq, threading, subprocess, os, tempfile, cv2, imutils, zipfile, shutil, datetime
 import time
 
 import message_protocols
@@ -21,12 +21,22 @@ class client_camera_system():
         global camera_on
         camera_on = True
 
+    def get_camera_cap(self):
+        counter = 0
+        while counter < 5 & (not self._cap):
+            self._cap = cv2.VideoCapture(0)
+            print "didnt got the cap. trying again"
+            time.sleep(1)
+            counter += 1
+
     def frame_grabber_daemon(self):
         # self.set_camera_prop()
-        self._cap = cv2.VideoCapture(0)
-        while (camera_on):
-            self._cap.grab()
-        self._cap.release()
+        if self._cap:
+            while (camera_on):
+                self._cap.grab()
+            self._cap.release()
+        else:
+            raise Exception("Unable to get Camera")
 
     def set_camera_prop(self):
         subprocess.call("v4l2-ctl -c white_balance_temperature_auto=0", shell=True)
@@ -35,17 +45,21 @@ class client_camera_system():
     def restart_connection(self):
         pass
 
-    def get_message(self, expected_message):
+    def get_message(self, expected_message = None):
         message = self._socket.recv()
-        if not expected_message == message:
-            print "error : received '", message, " ' instead of '", expected_message, "'"
-            self.restart_connection()
-
-        print "GOT : ", message
+        if expected_message:
+            if not expected_message == message:
+                print "error : received '", message, " ' instead of '", expected_message, "'"
+                self.restart_connection()
+                print "GOT : ", message
+        else:
+            print "GOT : ", message[0:100]
+        return message
 
     def send_message(self, message):
         self._socket.send(message)
-        print "SENT : ", message
+        if message is str:
+            print "SENT : ", message
 
     def start_video_record(self, folder_path, video_name):
 
@@ -80,41 +94,69 @@ class client_camera_system():
         time.sleep(1)
 
     def get_zipped_data_bytes(self, tempdir):
-        zip_file = zipfile.ZipFile("data.zip",mode='w')
+        tmp = tempfile.mkdtemp()
+        temp_zip_file = os.path.join(tmp, "data.zip")
+
+        zip_file = zipfile.ZipFile(temp_zip_file, 'w', zipfile.ZIP_DEFLATED)
         for root, dirs, files in os.walk(tempdir):
             for file in files:
-                zip_file.write(os.path.join(root, file))
-        return bytearray(zip_file)
+                zip_file.write(os.path.join(root, file), arcname=file)
 
-
+        zip_file.close()
+        f = open(temp_zip_file, 'rb')
+        byte_array = bytearray(f.read())
+        f.close()
+        print temp_zip_file
+        #shutil.rmtree(tmp, ignore_errors=True)
+        return byte_array
 
     def run(self):
 
         temp_dir = tempfile.mkdtemp()
-        print temp_dir
 
         self.get_message(message_protocols.CLIENT_TEST_SYSTEM_START_TESTING)
+        self.get_camera_cap()
         frame_grabber = threading.Thread(target=self.frame_grabber_daemon)
         frame_grabber.start()
         self.send_message(message_protocols.CLIENT_CAMERA_READY_TO_CAPTURED)
 
+        conf_file_data = self.get_message()
+        conf_file_data = str(conf_file_data)
+
+        self.send_message(message=message_protocols.CLIENT_CAMERA_CONF_FILE_RECEIVED)
+
         self.get_message(message_protocols.CLIENT_CAMERA_CAPTURE_QR)
+
         self.take_image(temp_dir, "test_qr.jpg")
+        qr_timestamp = time.time()
+        conf_file_data = conf_file_data + "\nQR IMAGE TIME: "+datetime.datetime.fromtimestamp(qr_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
         self.send_message(message_protocols.CLIENT_CAMERA_QR_CODE_CAPTURED)
 
         self.get_message(message_protocols.CLIENT_CAMERA_CAPTURE_BLANK_SCREEN)
         self.take_image(temp_dir, "ref.jpg")
+        ref_timestamp = time.time()
+        conf_file_data = conf_file_data + "\nREF IMAGE TIME: " + datetime.datetime.fromtimestamp(
+            ref_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         self.send_message(message_protocols.CLIENT_CAMERA_BLANK_SCREEN_CAPTURED)
 
         self.get_message(message_protocols.CLIENT_CAMERA_CAPTURE_VIDEO)
+
         t = threading.Thread(target=self.start_video_record, args=(temp_dir, "video.avi"))
         t.start()
+        video_timestamp = time.time()
+        conf_file_data = conf_file_data + "\nVIDEO START TIME: " + datetime.datetime.fromtimestamp(
+            video_timestamp).strftime('%Y-%m-%d %H:%M:%S')
         self.send_message(message_protocols.CLIENT_CAMERA_VIDEO_CAPTURED)
 
         self.get_message(message_protocols.CLIENT_CAMERA_STOP_CAPTURING_VIDEO)
         self.stop_video_record()
+
         self.send_message(message_protocols.CLIENT_CAMERA_VIDEO_CAPTURE_STOPPED)
+
+        conf_file = open(os.path.join(temp_dir, "conf.txt"), 'w')
+        conf_file.write(conf_file_data)
+        conf_file.close()
 
         self.get_message(message_protocols.CLIENT_CAMERA_DONE)
         self.send_message(message_protocols.CLIENT_CAMERA_RELEASING_RESOURCES)
@@ -123,6 +165,7 @@ class client_camera_system():
         file_byte_array = self.get_zipped_data_bytes(temp_dir)
         self.send_message(file_byte_array)
 
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 camera_thread = client_camera_system()

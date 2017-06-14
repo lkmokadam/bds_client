@@ -9,7 +9,7 @@ ML_MACHINE = "ML_MACHINE"
 
 SERVER_TCP_PORT = "tcp://*:5003"
 CAMERA_IP_PORT = "tcp://localhost:5001"
-ML_MACHINE_PORT = "tcp://"+sys.argv[-1]
+ML_MACHINE_PORT = "tcp://" + sys.argv[-1]
 
 
 class server:
@@ -32,7 +32,7 @@ class server:
         self._socket_ml_machine = self._context.socket(zmq.REQ)
         self._socket_ml_machine.connect(ML_MACHINE_PORT)
 
-    def get_message(self, machine, expected_message = None):
+    def get_message(self, machine, expected_message=None):
         if machine == CAMERA:
             message = self._socket_camera.recv()
         elif machine == TEST_MACHINE:
@@ -47,6 +47,7 @@ class server:
                 self.restart_server()
             print "GOT : ", message
         else:
+            print "GOT ", message[0:100]
             return message
 
     def send_message(self, machine, message):
@@ -58,16 +59,20 @@ class server:
             self._socket_ml_machine.send(message)
         else:
             os._exit(1)
-        print "SENT : ", message
-
-
-
+        if len(message) > 100:
+            print "SENT : ", message[0:100]
 
     def run(self):
         self.get_message(machine=TEST_MACHINE, expected_message=message_protocols.CLIENT_TEST_SYSTEM_START_TESTING)
 
+        self.send_message(machine=TEST_MACHINE,message=message_protocols.CLIENT_TEST_MACHINE_SEND_CONF_FILE)
+        conf_file = self.get_message(machine=TEST_MACHINE)
+
         self.send_message(machine=CAMERA, message=message_protocols.CLIENT_TEST_SYSTEM_START_TESTING)
         self.get_message(machine=CAMERA, expected_message=message_protocols.CLIENT_CAMERA_READY_TO_CAPTURED)
+
+        self.send_message(machine=CAMERA,message=conf_file)
+        self.get_message(machine=CAMERA,expected_message=message_protocols.CLIENT_CAMERA_CONF_FILE_RECEIVED)
 
         self.send_message(machine=TEST_MACHINE, message=message_protocols.CLIENT_TEST_MACHINE_LAUNCH_QR_CODE)
         self.get_message(machine=TEST_MACHINE, expected_message=message_protocols.CLIENT_TEST_MACHINE_QR_CODE_LAUNCHED)
@@ -110,7 +115,11 @@ class server:
 
         self.send_message(machine=ML_MACHINE, message=file)
         result = self.get_message(machine=ML_MACHINE)
-        
+
+        # TODO: send result to test_machine
+        self.send_message(machine=TEST_MACHINE, message=result)
+        self.get_message(machine=TEST_MACHINE, expected_message=message_protocols.CLIENT_TEST_MACHINE_RESULT_RECEIVED)
+
         self.send_message(machine=TEST_MACHINE, message=message_protocols.CLIENT_TEST_MACHINE_ALL_TRANSACTION_COMPLETED)
 
 

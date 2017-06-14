@@ -10,7 +10,7 @@ class client_test_system():
     _qr_proc = None
     _blank_screen_proc = None
 
-    def __init__(self,server_ip_port):
+    def __init__(self, server_ip_port):
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.REQ)
         self._socket.connect(server_ip_port)
@@ -18,19 +18,21 @@ class client_test_system():
     def restart_connection(self):
         pass
 
-    def get_message(self,expected_message):
+    def get_message(self, expected_message=None):
         message = self._socket.recv()
-        if not expected_message == message:
-            print "error : received '", message," ' instead of '", expected_message, "'"
-            self.restart_connection()
-        print "GOT : ",message
-
+        if expected_message:
+            print "GOT : ", message
+            if not expected_message == message:
+                print "error : received '", message, " ' instead of '", expected_message, "'"
+                self.restart_connection()
+        else:
+            print "GOT : ", message[0:100]
+            return message
 
     def send_message(self, message):
         print "Sending request for ready..... "
         self._socket.send(message)
-        print "SENT :",message
-
+        print "SENT :", message
 
     def launch_qr_codes(self):
         self._qr_proc = subprocess.Popen("./bin/client_testmachine_qr.exe")
@@ -49,8 +51,11 @@ class client_test_system():
     def run_app(self):
         pass
 
-    def run(self):
+    def run(self,conf):
         self.send_message(message_protocols.CLIENT_TEST_SYSTEM_START_TESTING)
+
+        self.get_message(expected_message=message_protocols.CLIENT_TEST_MACHINE_SEND_CONF_FILE)
+        self.send_message(message=conf)
 
         self.get_message(message_protocols.CLIENT_TEST_MACHINE_LAUNCH_QR_CODE)
         self.launch_qr_codes()
@@ -59,8 +64,6 @@ class client_test_system():
         self.get_message(message_protocols.CLIENT_TEST_MACHINE_KILL_QR_CODE)
         self.kill_qr_code()
         self.send_message(message_protocols.CLIENT_TEST_MACHINE_QR_CODE_KILLED)
-
-
 
         self.get_message(message_protocols.CLIENT_TEST_MACHINE_LAUNCH_BLANK_SCREEN)
         self.launch_blank_screen()
@@ -80,12 +83,17 @@ class client_test_system():
         time.sleep(5)
         print "done sleeping"
         self.send_message(message_protocols.CLIENT_TEST_MACHINE_VIDEO_KILLED)
+
+        result = self.get_message()
+        self.send_message(message_protocols.CLIENT_TEST_MACHINE_RESULT_RECEIVED)
+
         self.get_message(message_protocols.CLIENT_TEST_MACHINE_ALL_TRANSACTION_COMPLETED)
-        print "message sent"
+        return result
 
 
-for i in range(2):
-    server_ip_port = "tcp://"+sys.argv[-1]
-    client_test_system_thread = client_test_system(server_ip_port)
-    client_test_system_thread.run()
-    time.sleep(1)
+if __name__ == "__main__":
+    for i in range(2):
+        server_ip_port = "tcp://" + sys.argv[-1]
+        client_test_system_thread = client_test_system(server_ip_port)
+        print client_test_system_thread.run(conf="100001")
+        time.sleep(1)
