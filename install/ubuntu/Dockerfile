@@ -6,6 +6,8 @@ RUN apt-get update && \
     apt-get install -y tmux &&\
 	rm -rf /var/lib/apt/lists/*
 
+RUN pip install imutils
+
 RUN git clone https://github.com/lkmokadam/bds_client.git
 
 ENV PATH "$PATH:/bds_client"
