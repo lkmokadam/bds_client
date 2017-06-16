@@ -39,7 +39,7 @@ temp_dir = tempfile.mkdtemp()
 zip_ref = zipfile.ZipFile(sys.argv[1], 'r')
 zip_ref.extractall(temp_dir)
 zip_ref.close()
-video_path = temp_dir+"\\video"
+video_path = temp_dir+"\\video.mp4"
 cap = cv2.VideoCapture(video_path)
 print message
 resultLineNo = 0

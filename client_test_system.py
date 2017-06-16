@@ -92,8 +92,8 @@ class client_test_system():
 
 
 if __name__ == "__main__":
-    for i in range(2):
+    for i in range(1):
         server_ip_port = "tcp://" + sys.argv[-1]
         client_test_system_thread = client_test_system(server_ip_port)
-        print client_test_system_thread.run(conf="100001")
+        print client_test_system_thread.run(conf="222")
         time.sleep(1)

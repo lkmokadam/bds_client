@@ -71,8 +71,12 @@ class client_camera_system():
 
         CAP_WIDTH = 1920
         CAP_HEIGHT = 1080
-        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH , CAP_WIDTH);
-        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAP_HEIGHT);
+        if imutils.is_cv2():
+            self._cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, CAP_WIDTH)
+            self._cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, CAP_HEIGHT);
+        else:
+            self._cap.set(cv2.CAP_PROP_FRAME_WIDTH , CAP_WIDTH);
+            self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAP_HEIGHT);
         self._out_video_file = cv2.VideoWriter(video_file_path, fourcc, 20.0, (CAP_WIDTH, CAP_HEIGHT))
         print video_file_path
         global camera_recording_bit
@@ -133,7 +137,7 @@ class client_camera_system():
 
         self.get_message(message_protocols.CLIENT_CAMERA_CAPTURE_QR)
 
-        self.take_image(temp_dir, "test_qr.jpg")
+        self.take_image(temp_dir, "qr.jpg")
         qr_timestamp = time.time()
         conf_file_data = conf_file_data + "\nQR IMAGE TIME: "+datetime.datetime.fromtimestamp(qr_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
