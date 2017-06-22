@@ -6,7 +6,8 @@ import message_protocols
 global camera_recording_bit
 global camera_on
 CAMERA_SERVER_PORT = "tcp://*:5001"
-
+CAP_WIDTH = 1920
+CAP_HEIGHT = 1080
 
 class client_camera_system():
     _context = None
@@ -25,12 +26,20 @@ class client_camera_system():
         counter = 0
         while counter < 5 & (not self._cap):
             self._cap = cv2.VideoCapture(0)
+            if self._cap:
+                if imutils.is_cv2():
+                    self._cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, CAP_WIDTH)
+                    self._cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, CAP_HEIGHT);
+                else:
+                    self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAP_WIDTH);
+                    self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAP_HEIGHT);
             print "didnt got the cap. trying again"
             time.sleep(1)
             counter += 1
 
     def frame_grabber_daemon(self):
         # self.set_camera_prop()
+        global camera_on
         if self._cap:
             while (camera_on):
                 self._cap.grab()
@@ -64,19 +73,10 @@ class client_camera_system():
     def start_video_record(self, folder_path, video_name):
 
         if imutils.is_cv2():
-            fourcc = cv2.cv.CV_FOURCC(*'MJPG')
+            fourcc = cv2.cv.CV_FOURCC(*'XVID')
         else:
-            fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_file_path = os.path.join(folder_path, video_name)
-
-        CAP_WIDTH = 1920
-        CAP_HEIGHT = 1080
-        if imutils.is_cv2():
-            self._cap.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, CAP_WIDTH)
-            self._cap.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, CAP_HEIGHT);
-        else:
-            self._cap.set(cv2.CAP_PROP_FRAME_WIDTH , CAP_WIDTH);
-            self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAP_HEIGHT);
         self._out_video_file = cv2.VideoWriter(video_file_path, fourcc, 20.0, (CAP_WIDTH, CAP_HEIGHT))
         print video_file_path
         global camera_recording_bit
@@ -95,6 +95,7 @@ class client_camera_system():
         time.sleep(1)
         camera_on = False
         self._out_video_file.release()
+        self._cap.release()
         time.sleep(3)
 
     def take_image(self, folder_path, img_name):
