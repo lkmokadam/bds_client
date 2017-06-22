@@ -31,6 +31,7 @@ class client_camera_system():
 
     def frame_grabber_daemon(self):
         # self.set_camera_prop()
+        global camera_on
         if self._cap:
             while (camera_on):
                 self._cap.grab()
@@ -95,6 +96,7 @@ class client_camera_system():
         time.sleep(1)
         camera_on = False
         self._out_video_file.release()
+        self._cap.release()
         time.sleep(3)
 
     def take_image(self, folder_path, img_name):
