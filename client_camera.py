@@ -6,8 +6,8 @@ import message_protocols
 global camera_recording_bit
 global camera_on
 CAMERA_SERVER_PORT = "tcp://*:5001"
-CAP_WIDTH = 1920
-CAP_HEIGHT = 1080
+CAP_WIDTH = 960
+CAP_HEIGHT = 720
 
 class client_camera_system():
     _context = None
@@ -77,7 +77,7 @@ class client_camera_system():
         else:
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_file_path = os.path.join(folder_path, video_name)
-        self._out_video_file = cv2.VideoWriter(video_file_path, fourcc, 20.0, (CAP_WIDTH, CAP_HEIGHT))
+        self._out_video_file = cv2.VideoWriter(video_file_path, fourcc, 10.0, (CAP_WIDTH, CAP_HEIGHT))
         print video_file_path
         global camera_recording_bit
         camera_recording_bit = True
@@ -88,6 +88,7 @@ class client_camera_system():
             ret, frame = self._cap.retrieve()
             if ret:
                 self._out_video_file.write(frame)
+                time.sleep(0.05)
 
     def stop_video_record(self):
         global camera_recording_bit
@@ -95,7 +96,6 @@ class client_camera_system():
         time.sleep(1)
         camera_on = False
         self._out_video_file.release()
-        self._cap.release()
         time.sleep(3)
 
     def take_image(self, folder_path, img_name):

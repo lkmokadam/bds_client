@@ -25,9 +25,11 @@ f.close()
 
 #  Get the reply.
 message = socket.recv()
+original_message = message
 end = time.time()-start;
 print "Received reply..... "
 print "Time taken to receive reply in seconds: ", end
+message = message.split('@')[1]
 pathOfZipFile = message.split()[0]
 noOfDisp = int(message.split()[1])
 print  "No of displays detected : " , noOfDisp
@@ -41,7 +43,9 @@ zip_ref.extractall(temp_dir)
 zip_ref.close()
 video_path = temp_dir + "\\video.avi"
 cap = cv2.VideoCapture(video_path)
-print message
+
+print "---------------------- Original Message -------------------------------------"
+print original_message
 resultLineNo = 0
 while(True):
     ret, frame = cap.read()
@@ -52,7 +56,7 @@ while(True):
         for i in range(noOfDisp):
             print resultVec[resultLineNo+i], "  ",
 
-        resultLineNo = resultLineNo + 4;
+        resultLineNo = resultLineNo + noOfDisp;
         cv2.waitKey()
     else:
         break
